@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+:root{
+    font-size: 1vw;
+}
+
+body{
+    font-family: 'Times New Roman', Times, serif;
+    margin: 0px;
+    padding: 0px;
+    background-color: cyan;
+}
