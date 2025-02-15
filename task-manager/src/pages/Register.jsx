@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import bcrypt from 'bcryptjs';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -22,20 +23,11 @@ export default function Register() {
   const handleRegister = (e) => {
     e.preventDefault();
     const users = JSON.parse(localStorage.getItem('users')) || [];
-    
-    if (!photo) {
-      toast.error('Please upload a profile photo');
-      return;
-    }
+    const user = { username, password };
 
-    if (users.some(user => user.username === username)) {
-      toast.error('Username already exists');
-      return;
-    }
-
-    users.push({ username, password, photo });
+    users.push(user);
     localStorage.setItem('users', JSON.stringify(users));
-    toast.success('Registration successful! 🎉');
+    toast.success('Account created successfully!');
     navigate('/login');
   };
 

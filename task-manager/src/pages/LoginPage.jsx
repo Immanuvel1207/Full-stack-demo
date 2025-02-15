@@ -11,7 +11,7 @@ export default function LoginPage({ setIsAuthenticated }) {
     e.preventDefault();
     const users = JSON.parse(localStorage.getItem('users')) || [];
     const user = users.find(u => u.username === username && u.password === password);
-    
+
     if (user) {
       localStorage.setItem('user', JSON.stringify(user));
       setIsAuthenticated(true);
