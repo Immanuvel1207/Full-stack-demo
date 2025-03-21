@@ -1,22 +1,29 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 
-export default function LoginPage({ setIsAuthenticated }) {
+function LoginPage({ setIsAuthenticated, setUser, setCurrentPage }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem('users')) || [];
+    
+    // Get users from localStorage
+    const usersJson = localStorage.getItem('users');
+    const users = usersJson ? JSON.parse(usersJson) : [];
+    
+    // Find matching user
     const user = users.find(u => u.username === username && u.password === password);
 
     if (user) {
+      // Store user in localStorage for persistence
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Update app state
+      setUser(user);
       setIsAuthenticated(true);
+      setCurrentPage('dashboard');
       toast.success('Welcome back! 🎉');
-      navigate('/');
     } else {
       toast.error('Invalid credentials');
     }
@@ -36,6 +43,7 @@ export default function LoginPage({ setIsAuthenticated }) {
               className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
+              required
             />
           </div>
           <div>
@@ -45,6 +53,7 @@ export default function LoginPage({ setIsAuthenticated }) {
               className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
           </div>
           <button 
@@ -56,11 +65,16 @@ export default function LoginPage({ setIsAuthenticated }) {
         </form>
         <p className="mt-6 text-center text-gray-600">
           New here? {' '}
-          <Link to="/register" className="text-purple-600 hover:text-pink-600 font-semibold">
+          <button 
+            onClick={() => setCurrentPage('register')}
+            className="text-purple-600 hover:text-pink-600 font-semibold"
+          >
             Create Account
-          </Link>
+          </button>
         </p>
       </div>
     </div>
   );
 }
+
+export default LoginPage;

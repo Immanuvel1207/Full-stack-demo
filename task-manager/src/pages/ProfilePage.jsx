@@ -1,24 +1,31 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 
-export default function Profile() {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
+function ProfilePage({ user, setUser }) {
   const [newPassword, setNewPassword] = useState('');
   const [newPhoto, setNewPhoto] = useState('');
 
   const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setNewPhoto(reader.result);
-    };
-    if (file) {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      
+      reader.onloadend = () => {
+        setNewPhoto(reader.result);
+      };
+      
       reader.readAsDataURL(file);
     }
   };
 
   const handleUpdateProfile = (e) => {
     e.preventDefault();
-    const users = JSON.parse(localStorage.getItem('users')) || [];
+    
+    // Get all users
+    const usersJson = localStorage.getItem('users');
+    const users = usersJson ? JSON.parse(usersJson) : [];
+    
+    // Update the current user
     const updatedUsers = users.map(u => {
       if (u.username === user.username) {
         return { 
@@ -29,18 +36,24 @@ export default function Profile() {
       }
       return u;
     });
-
+    
+    // Create updated user object
     const updatedUser = {
       ...user,
       password: newPassword || user.password,
       photo: newPhoto || user.photo
     };
-
+    
+    // Save to localStorage
     localStorage.setItem('users', JSON.stringify(updatedUsers));
     localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Update state
     setUser(updatedUser);
     setNewPassword('');
-    alert('Profile updated successfully!');
+    setNewPhoto('');
+    
+    toast.success('Profile updated successfully!');
   };
 
   return (
@@ -50,7 +63,7 @@ export default function Profile() {
         
         <div className="mb-6 text-center">
           <img 
-            src={user.photo} 
+            src={user.photo || "/placeholder.svg"} 
             alt="Profile" 
             className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-indigo-200"
           />
@@ -83,7 +96,11 @@ export default function Profile() {
             />
             {newPhoto && (
               <div className="mt-2">
-                <img src={newPhoto} alt="New photo preview" className="w-20 h-20 rounded-full object-cover" />
+                <img 
+                  src={newPhoto || "/placeholder.svg"} 
+                  alt="New photo preview" 
+                  className="w-20 h-20 rounded-full object-cover"
+                />
               </div>
             )}
           </div>
@@ -99,3 +116,5 @@ export default function Profile() {
     </div>
   );
 }
+
+export default ProfilePage;

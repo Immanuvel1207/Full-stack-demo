@@ -1,22 +1,29 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function Dashboard() {
+function Dashboard({ user }) {
   const [stats, setStats] = useState({
     total: 0,
     completed: 0,
     pending: 0
   });
-  const user = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
-    const tasks = JSON.parse(localStorage.getItem(`tasks_${user.username}`)) || [];
-    const completed = tasks.filter(task => task.completed).length;
-    setStats({
-      total: tasks.length,
-      completed: completed,
-      pending: tasks.length - completed
-    });
-  }, [user.username]);
+    if (user && user.username) {
+      // Get tasks from localStorage
+      const tasksKey = `tasks_${user.username}`;
+      const tasksJson = localStorage.getItem(tasksKey);
+      const tasks = tasksJson ? JSON.parse(tasksJson) : [];
+      
+      // Calculate stats
+      const completed = tasks.filter(task => task.completed).length;
+      
+      setStats({
+        total: tasks.length,
+        completed: completed,
+        pending: tasks.length - completed
+      });
+    }
+  }, [user]);
 
   return (
     <div className="container mx-auto p-4">
@@ -38,3 +45,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+export default Dashboard;

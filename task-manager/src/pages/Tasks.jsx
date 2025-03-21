@@ -1,18 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 
-export default function Tasks({ user }) {
+function Tasks({ user }) {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
   const [editingTask, setEditingTask] = useState(null);
+  const [taskKey, setTaskKey] = useState('');
+
+  // Set the localStorage key for tasks
+  useEffect(() => {
+    if (user && user.username) {
+      setTaskKey(`tasks_${user.username}`);
+    }
+  }, [user]);
 
   // Load tasks from localStorage
   useEffect(() => {
-    if (user && user.username) {
-      const storedTasks = JSON.parse(localStorage.getItem(`tasks_${user.username}`)) || [];
-      setTasks(storedTasks);
+    if (taskKey) {
+      try {
+        const storedTasks = localStorage.getItem(taskKey);
+        if (storedTasks) {
+          setTasks(JSON.parse(storedTasks));
+        }
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+        toast.error('Error loading tasks');
+      }
     }
-  }, [user]);
+  }, [taskKey]);
+
+  // Save tasks to localStorage whenever tasks change
+  useEffect(() => {
+    if (taskKey && tasks) {
+      try {
+        localStorage.setItem(taskKey, JSON.stringify(tasks));
+        console.log('Tasks saved:', tasks);
+      } catch (error) {
+        console.error('Error saving tasks:', error);
+        toast.error('Error saving tasks');
+      }
+    }
+  }, [tasks, taskKey]);
 
   // Add a new task
   const addTask = (e) => {
@@ -21,39 +49,36 @@ export default function Tasks({ user }) {
       toast.error('Task cannot be empty!');
       return;
     }
-    if (tasks.some((task) => task.text === newTask.trim())) {
+    
+    if (tasks.some(task => task.text === newTask.trim())) {
       toast.error('Task already exists!');
       return;
     }
-    const newTasks = [
-      ...tasks,
-      {
-        id: Date.now(),
-        text: newTask,
-        completed: false,
-        createdAt: new Date().toLocaleString(),
-      },
-    ];
-    setTasks(newTasks);
-    localStorage.setItem(`tasks_${user.username}`, JSON.stringify(newTasks));
+    
+    const newTaskObj = {
+      id: Date.now(),
+      text: newTask.trim(),
+      completed: false,
+      createdAt: new Date().toLocaleString()
+    };
+    
+    setTasks(prevTasks => [...prevTasks, newTaskObj]);
     setNewTask('');
     toast.success('Task added successfully!');
   };
 
   // Toggle task completion
   const toggleTask = (id) => {
-    const updatedTasks = tasks.map((task) =>
-      task.id === id ? { ...task, completed: !task.completed } : task
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
     );
-    setTasks(updatedTasks);
-    localStorage.setItem(`tasks_${user.username}`, JSON.stringify(updatedTasks));
   };
 
   // Delete a task
   const deleteTask = (id) => {
-    const updatedTasks = tasks.filter((task) => task.id !== id);
-    setTasks(updatedTasks);
-    localStorage.setItem(`tasks_${user.username}`, JSON.stringify(updatedTasks));
+    setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
     toast.success('Task deleted!');
   };
 
@@ -62,31 +87,20 @@ export default function Tasks({ user }) {
     setEditingTask({ ...task });
   };
 
-  // Save edited task **(Fixed Issue)**
+  // Save edited task
   const saveTask = () => {
-    if (!editingTask.text.trim()) {
+    if (!editingTask || !editingTask.text.trim()) {
       toast.error('Task cannot be empty!');
       return;
     }
-
-    // First, set editingTask to null to trigger re-render immediately
-    setEditingTask(null);
-
-    // Then, update the tasks state
-    setTasks((prevTasks) =>
-      prevTasks.map((t) => (t.id === editingTask.id ? { ...t, text: editingTask.text } : t))
-    );
-
-    // Store the updated tasks in localStorage
-    localStorage.setItem(
-      `tasks_${user.username}`,
-      JSON.stringify(
-        tasks.map((t) =>
-          t.id === editingTask.id ? { ...t, text: editingTask.text } : t
-        )
+    
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === editingTask.id ? { ...task, text: editingTask.text.trim() } : task
       )
     );
-
+    
+    setEditingTask(null);
     toast.success('Task updated!');
   };
 
@@ -129,6 +143,7 @@ export default function Tasks({ user }) {
                   value={editingTask.text}
                   onChange={(e) => setEditingTask({ ...editingTask, text: e.target.value })}
                   className="border p-2 rounded-lg outline-none mb-2"
+                  autoFocus
                 />
               ) : (
                 <span
@@ -144,39 +159,43 @@ export default function Tasks({ user }) {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center mt-2 md:mt-0">
-              <button
-                onClick={() => toggleTask(task.id)}
-                className={`mr-2 ${
-                  task.completed ? 'bg-green-500' : 'bg-purple-500'
-                } hover:bg-purple-600 text-white py-1 px-3 text-sm rounded-lg`}
-              >
-                {task.completed ? 'Undo' : 'Done'}
-              </button>
-              <button
-                onClick={() => deleteTask(task.id)}
-                className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 text-sm rounded-lg"
-              >
-                Delete
-              </button>
-              {!editingTask && (
-                <button
-                  onClick={() => editTask(task)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 text-sm rounded-lg ml-2"
-                >
-                  Edit
-                </button>
-              )}
-              {editingTask && editingTask.id === task.id && (
+              {!editingTask || editingTask.id !== task.id ? (
+                <>
+                  <button
+                    onClick={() => toggleTask(task.id)}
+                    className={`mr-2 ${
+                      task.completed ? 'bg-green-500' : 'bg-purple-500'
+                    } hover:opacity-90 text-white py-1 px-3 text-sm rounded-lg`}
+                  >
+                    {task.completed ? 'Undo' : 'Done'}
+                  </button>
+                  
+                  <button
+                    onClick={() => editTask(task)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 text-sm rounded-lg mr-2"
+                  >
+                    Edit
+                  </button>
+                  
+                  <button
+                    onClick={() => deleteTask(task.id)}
+                    className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 text-sm rounded-lg"
+                  >
+                    Delete
+                  </button>
+                </>
+              ) : (
                 <>
                   <button
                     onClick={saveTask}
-                    className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 text-sm rounded-lg ml-2"
+                    className="bg-green-500 hover:bg-green-600 text-white py-1 px-3 text-sm rounded-lg mr-2"
                   >
                     Save
                   </button>
+                  
                   <button
                     onClick={() => setEditingTask(null)}
-                    className="bg-gray-500 hover:bg-gray-600 text-white py-1 px-3 text-sm rounded-lg ml-2"
+                    className="bg-gray-500 hover:bg-gray-600 text-white py-1 px-3 text-sm rounded-lg"
                   >
                     Cancel
                   </button>
@@ -189,3 +208,5 @@ export default function Tasks({ user }) {
     </div>
   );
 }
+
+export default Tasks;
