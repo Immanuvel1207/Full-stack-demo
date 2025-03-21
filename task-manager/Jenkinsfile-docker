@@ -1,72 +1,29 @@
-pipeline{
+pipeline {
     agent any
-    tools{
-        jdk 'jdk17'
-        nodejs 'node16'
-    }
-    environment {
-        SCANNER_HOME=tool 'sonar-scanner'
-    }
+
     stages {
-        stage('clean workspace'){
-            steps{
-                cleanWs()
-            }
-        }
-        stage('Checkout from Git'){
-            steps{
-                git branch: 'main', url: 'https://github.com/akaspatranobis/hotstar-clone-app-ci-cd-k8.git'
-            }
-        }
-        stage("Sonarqube Analysis "){
-            steps{
-                withSonarQubeEnv('sonar-server') {
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Hotstar \
-                    -Dsonar.projectKey=Hotstar'''
-                }
-            }
-        }
-        stage("quality gate"){
-           steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
-                }
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/your-repo.git'
             }
         }
         stage('Install Dependencies') {
             steps {
-                sh "npm install"
+                sh 'npm install -g npm@latest' // Update NPM
+                sh 'npm install'
+                sh 'npm audit fix --force' // Fix vulnerabilities
             }
         }
-        
-        stage('TRIVY FS SCAN') {
+        stage('Build React App') {
             steps {
-                sh "trivy fs . > trivyfs.txt"
+                sh 'npm run build'
             }
         }
-        stage("Docker Build & Push"){
-            steps{
-                script{
-                   withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){
-                       sh "docker build -t hotstar ."
-                       sh "docker tag hotstar apatranobis59/hotstar:latest "
-                       sh "docker push apatranobis59/hotstar:latest"
-                    }
-                }
+        stage('Build Docker Image') {
+            steps {
+                sh 'DOCKER_BUILDKIT=1 docker build -t your-image-name .'
             }
         }
-        stage("TRIVY"){
-            steps{
-                sh "trivy image apatranobis59/hotstar:latest > trivyimage.txt" 
-            }
-        }
-		
-		stage("deploy_docker"){
-				steps{
-					sh "docker run -d --name hotstar -p 3001:3000 apatranobis59/hotstar:latest"
-				}
-		}
-        
-        
     }
-} 
+}
+
